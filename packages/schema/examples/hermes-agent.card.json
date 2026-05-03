@@ -1,0 +1,21 @@
+{
+  "id": "agent-hermes-main",
+  "type": "agent",
+  "title": "Hermes Main Agent",
+  "subtitle": "Operational AI Operator",
+  "description": "Primary command agent profile card.",
+  "stats": [
+    {"label": "Model", "value": "gpt-5.3-codex"},
+    {"label": "Heartbeat", "value": "steady"},
+    {"label": "Soul", "value": "mission-first"}
+  ],
+  "traits": ["decisive", "organized", "operator"],
+  "sections": [
+    {"kind": "markdown", "title": "Personality", "content": "Field operator tone, minimal words, mission first."},
+    {"kind": "kv", "title": "Capabilities", "content": {"planning": true, "execution": true, "memory": true}}
+  ],
+  "source": {"path": "~/.hermes", "parser": "profile-mapper", "confidence": 0.92},
+  "editableFields": ["title", "subtitle", "description", "traits", "sections"],
+  "updatedAt": "2026-05-03T00:00:00Z",
+  "revision": 1
+}

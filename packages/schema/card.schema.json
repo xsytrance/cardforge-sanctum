@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.local/schema/card.schema.json",
+  "title": "CardForge Card",
+  "type": "object",
+  "required": ["id", "type", "title", "updatedAt", "revision"],
+  "properties": {
+    "id": {"type": "string"},
+    "type": {"type": "string", "enum": ["agent", "service", "workspace", "dataset", "generic"]},
+    "title": {"type": "string"},
+    "subtitle": {"type": "string"},
+    "description": {"type": "string"},
+    "stats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "value"],
+        "properties": {
+          "label": {"type": "string"},
+          "value": {"type": ["string", "number", "boolean"]},
+          "unit": {"type": "string"},
+          "icon": {"type": "string"}
+        }
+      }
+    },
+    "traits": {"type": "array", "items": {"type": "string"}},
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "url"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["image", "audio", "video", "file"]},
+          "url": {"type": "string"},
+          "alt": {"type": "string"}
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "title"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["kv", "markdown", "table", "chart"]},
+          "title": {"type": "string"},
+          "content": {}
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "path": {"type": "string"},
+        "parser": {"type": "string"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "editableFields": {"type": "array", "items": {"type": "string"}},
+    "updatedAt": {"type": "string", "format": "date-time"},
+    "revision": {"type": "integer", "minimum": 1}
+  }
+}

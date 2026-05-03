@@ -1,0 +1,19 @@
+{
+  "id": "service-nebula",
+  "type": "service",
+  "title": "Nebula",
+  "subtitle": "Command Sanctum",
+  "description": "Character-driven operational web app",
+  "stats": [
+    {"label": "Server", "value": "PRIME"},
+    {"label": "Port", "value": 1984},
+    {"label": "Public URL", "value": "https://nebula.agenorr.com"}
+  ],
+  "sections": [
+    {"kind": "kv", "title": "Runtime", "content": {"host": "127.0.0.1", "health": "/healthz", "owner": "VG God"}}
+  ],
+  "source": {"path": "/home/xsyprime/Apps/nebula", "parser": "service-mapper", "confidence": 0.89},
+  "editableFields": ["description", "sections"],
+  "updatedAt": "2026-05-03T00:00:00Z",
+  "revision": 1
+}

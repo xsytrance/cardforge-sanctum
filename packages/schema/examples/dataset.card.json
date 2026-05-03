@@ -1,0 +1,25 @@
+{
+  "id": "dataset-finance-weekly",
+  "type": "dataset",
+  "title": "Weekly PnL",
+  "subtitle": "Spreadsheet-derived metrics",
+  "stats": [
+    {"label": "Rows", "value": 124},
+    {"label": "Metrics", "value": 5}
+  ],
+  "sections": [
+    {
+      "kind": "chart",
+      "title": "PnL Trend",
+      "content": {
+        "chartType": "line",
+        "x": "date",
+        "y": ["pnl"]
+      }
+    }
+  ],
+  "source": {"path": "./spreadsheets/weekly_pnl.xlsx", "parser": "xlsx-mapper", "confidence": 0.81},
+  "editableFields": ["sections"],
+  "updatedAt": "2026-05-03T00:00:00Z",
+  "revision": 1
+}
