@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CardForge Deck</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>CardForge</h1>
+        <p class="subtitle">Mobile Trading-Card Deck</p>
+      </div>
+      <button id="refreshBtn">Refresh</button>
+    </header>
+
+    <section class="ingest">
+      <input id="folderPath" type="text" placeholder="/tmp/cardforge-sample" value="/tmp/cardforge-sample" />
+      <button id="ingestBtn">Ingest Folder</button>
+    </section>
+
+    <section id="report" class="report hidden"></section>
+    <section id="deck" class="deck"></section>
+  </main>
+
+  <template id="cardTemplate">
+    <article class="card">
+      <div class="glow"></div>
+      <div class="card-head">
+        <span class="badge type"></span>
+        <span class="badge rev"></span>
+      </div>
+      <h2 class="title"></h2>
+      <p class="sub"></p>
+      <p class="desc"></p>
+      <div class="stats"></div>
+      <div class="traits"></div>
+    </article>
+  </template>
+
+  <script src="./app.js"></script>
+</body>
+</html>
