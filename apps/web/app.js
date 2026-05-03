@@ -23,21 +23,90 @@ function traitNode(t) {
   return d;
 }
 
+async function saveCard(id, title, subtitle, description) {
+  const r = await fetch(`${API}/cards/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, subtitle, description })
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function getRevisions(id) {
+  const r = await fetch(`${API}/cards/${id}/revisions`);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function revertRevision(id, revision) {
+  const r = await fetch(`${API}/cards/${id}/revert/${revision}`, { method: 'POST' });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
 function renderCards(cards) {
   deckEl.innerHTML = '';
   cards.forEach((card) => {
     const frag = template.content.cloneNode(true);
     frag.querySelector('.type').textContent = card.type;
     frag.querySelector('.rev').textContent = `r${card.revision}`;
-    frag.querySelector('.title').textContent = card.title;
-    frag.querySelector('.sub').textContent = card.subtitle || '';
-    frag.querySelector('.desc').textContent = card.description || '';
+
+    const titleEl = frag.querySelector('.edit-title');
+    const subtitleEl = frag.querySelector('.edit-subtitle');
+    const descEl = frag.querySelector('.edit-description');
+
+    titleEl.value = card.title || '';
+    subtitleEl.value = card.subtitle || '';
+    descEl.value = card.description || '';
 
     const stats = frag.querySelector('.stats');
     (card.stats || []).slice(0, 6).forEach((s) => stats.appendChild(statNode(s)));
 
     const traits = frag.querySelector('.traits');
     (card.traits || []).slice(0, 8).forEach((t) => traits.appendChild(traitNode(t)));
+
+    const revBox = frag.querySelector('.revisions');
+
+    frag.querySelector('.save-btn').addEventListener('click', async () => {
+      try {
+        const out = await saveCard(card.id, titleEl.value, subtitleEl.value, descEl.value);
+        showReport(`Saved ${out.id} at revision r${out.revision}`);
+        await refreshCards();
+      } catch (e) {
+        showReport(`Save failed: ${e.message}`);
+      }
+    });
+
+    frag.querySelector('.revs-btn').addEventListener('click', async () => {
+      try {
+        const revs = await getRevisions(card.id);
+        revBox.innerHTML = '';
+        revs.slice().reverse().forEach((rv) => {
+          const row = document.createElement('div');
+          row.className = 'rev-row';
+          const when = new Date(rv.updatedAt).toLocaleString();
+          row.innerHTML = `<span>r${rv.revision} · ${when}</span>`;
+          const btn = document.createElement('button');
+          btn.className = 'small';
+          btn.textContent = 'Revert';
+          btn.addEventListener('click', async () => {
+            try {
+              const out = await revertRevision(card.id, rv.revision);
+              showReport(`Reverted ${card.id} to r${rv.revision}; new head r${out.revision}`);
+              await refreshCards();
+            } catch (e) {
+              showReport(`Revert failed: ${e.message}`);
+            }
+          });
+          row.appendChild(btn);
+          revBox.appendChild(row);
+        });
+        revBox.classList.toggle('hidden');
+      } catch (e) {
+        showReport(`Revision load failed: ${e.message}`);
+      }
+    });
 
     deckEl.appendChild(frag);
   });
