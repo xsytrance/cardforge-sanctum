@@ -5,6 +5,8 @@ from typing import Any, Literal
 from datetime import datetime, timezone
 import uuid
 
+from ingest import ingest_folder as ingest_folder_impl
+
 app = FastAPI(title="CardForge API", version="0.1.0")
 
 CARD_TYPES = Literal["agent", "service", "workspace", "dataset", "generic"]
@@ -120,11 +122,29 @@ def revert_card(card_id: str, revision: int) -> Card:
     REVISIONS[card_id].append(restored)
     return restored
 
+class IngestRequest(BaseModel):
+    path: str
+
+
 @app.post('/ingest/folder')
-def ingest_folder(path: str) -> dict[str, Any]:
-    # Stub for v1 parser pipeline
+def ingest_folder(payload: IngestRequest) -> dict[str, Any]:
+    result = ingest_folder_impl(payload.path)
+    if result.get('status') != 'ok':
+        raise HTTPException(status_code=400, detail=result)
+
+    imported = 0
+    for card_data in result.get('cards', []):
+        cid = card_data['id']
+        card_data['updatedAt'] = now()
+        card_data['revision'] = 1
+        card = Card(**card_data)
+        CARDS[cid] = card
+        REVISIONS[cid] = [card]
+        imported += 1
+
     return {
-        'status': 'accepted',
-        'path': path,
-        'message': 'Ingestion pipeline scaffolded. Parser workers to be attached in Phase 2.'
+        'status': 'ok',
+        'imported': imported,
+        'report': result.get('report', {}),
+        'path': result.get('path')
     }
