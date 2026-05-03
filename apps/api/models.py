@@ -22,3 +22,8 @@ class CardPatch(BaseModel):
 
 class IngestFolderRequest(BaseModel):
     path: str
+
+
+class WatchStartRequest(BaseModel):
+    path: str
+    debounce_seconds: float = 2.0

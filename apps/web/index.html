@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>CardForge</title>
   <link rel="stylesheet" href="styles.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
@@ -18,6 +19,13 @@
     <button id="refreshBtn">Refresh</button>
   </section>
 
+  <section class="controls">
+    <button id="watchStartBtn">Start Watch</button>
+    <button id="watchStopBtn">Stop Watch</button>
+    <button id="watchStatusBtn">Watch Status</button>
+    <input id="debounce" placeholder="debounce secs" value="2" style="max-width:140px"/>
+  </section>
+
   <section id="status"></section>
   <main id="deck" class="deck"></main>
 
@@ -27,6 +35,10 @@
       <input class="title"/>
       <input class="subtitle"/>
       <textarea class="description"></textarea>
+      <details>
+        <summary>Dataset Chart</summary>
+        <div class="chartWrap"><canvas class="chart"></canvas></div>
+      </details>
       <details>
         <summary>Fields</summary>
         <textarea class="fields"></textarea>
