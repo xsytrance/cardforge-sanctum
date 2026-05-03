@@ -1,208 +1,141 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Any
-import csv
-import json
-import re
+from typing import Any, Dict, List, Tuple
+import csv, json, re
+import yaml
+from openpyxl import load_workbook
 
-try:
-    import yaml  # type: ignore
-except Exception:
-    yaml = None
+TEXT_EXT = {'.md', '.txt'}
+STRUCT_EXT = {'.json', '.yaml', '.yml'}
+TABLE_EXT = {'.csv', '.xlsx'}
 
-SUPPORTED = {'.md', '.txt', '.json', '.yaml', '.yml', '.csv', '.xlsx'}
+KEY_PATTERNS = {
+    'model': re.compile(r'\bmodel\b\s*[:=]\s*(.+)', re.I),
+    'personality': re.compile(r'\bpersonality\b\s*[:=]\s*(.+)', re.I),
+    'heartbeat': re.compile(r'\bheartbeat\b\s*[:=]\s*(.+)', re.I),
+    'soul': re.compile(r'\bsoul\b\s*[:=]\s*(.+)', re.I),
+    'port': re.compile(r'\bport\b\s*[:=]\s*(.+)', re.I),
+    'host': re.compile(r'\bhost\b\s*[:=]\s*(.+)', re.I),
+    'server': re.compile(r'\bserver\b\s*[:=]\s*(.+)', re.I),
+    'app_name': re.compile(r'\bapp[_\- ]?name\b\s*[:=]\s*(.+)', re.I),
+}
 
 
-def _safe_read_text(path: Path) -> str:
-    return path.read_text(encoding='utf-8', errors='ignore')
+def infer_type(name: str, fields: Dict[str, Any]) -> Tuple[str, float]:
+    n = name.lower()
+    if any(k in fields for k in ['model','personality','heartbeat','soul']) or 'agent' in n:
+        return 'agent', 0.9
+    if any(k in fields for k in ['port','host','server','app_name']) or 'service' in n:
+        return 'service', 0.88
+    if 'table_preview' in fields or 'chart_suggestions' in fields or 'dataset' in n:
+        return 'dataset', 0.86
+    return 'note', 0.6
 
 
-def _extract_traits(text: str) -> list[str]:
-    words = re.findall(r"[A-Za-z][A-Za-z0-9_-]{3,}", text.lower())
-    stop = {'this', 'that', 'with', 'from', 'into', 'card', 'cards', 'agent', 'service', 'model'}
-    out: list[str] = []
-    for w in words:
-        if w in stop:
-            continue
-        if w not in out:
-            out.append(w)
-        if len(out) >= 6:
-            break
+def extract_kv_from_text(text: str) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    for key, pat in KEY_PATTERNS.items():
+        m = pat.search(text)
+        if m:
+            out[key] = m.group(1).strip()
     return out
 
 
-def _kv_from_text(text: str) -> dict[str, str]:
-    kv = {}
-    for line in text.splitlines():
-        if ':' in line and len(line) < 220:
-            k, v = line.split(':', 1)
-            k = k.strip().lower().replace(' ', '_')
-            v = v.strip()
-            if k and v:
-                kv[k] = v
-    return kv
+def parse_text(path: Path) -> Dict[str, Any]:
+    text = path.read_text(encoding='utf-8', errors='ignore')
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    title = lines[0][:120] if lines else path.stem
+    description = '\n'.join(lines[1:8])[:600]
+    fields = extract_kv_from_text(text)
+    return {'title': title, 'description': description, 'fields': fields}
 
 
-def _card_type_from_path(path: Path, data_keys: set[str] | None = None) -> str:
-    p = str(path).lower()
-    keys = data_keys or set()
-    if 'service' in p or {'port', 'host', 'server', 'app_name'} & keys:
-        return 'service'
-    if 'agent' in p or {'model', 'personality', 'heartbeat', 'soul'} & keys:
-        return 'agent'
-    if path.suffix.lower() in {'.csv', '.xlsx'}:
-        return 'dataset'
-    if 'workspace' in p:
-        return 'workspace'
-    return 'generic'
+def parse_json_yaml(path: Path) -> Dict[str, Any]:
+    raw = path.read_text(encoding='utf-8', errors='ignore')
+    data = json.loads(raw) if path.suffix.lower()=='.json' else yaml.safe_load(raw)
+    if not isinstance(data, dict):
+        data = {'value': data}
+    title = str(data.get('name') or data.get('title') or path.stem)
+    description = str(data.get('description') or '')
+    fields = {k:v for k,v in data.items() if k not in {'name','title','description'}}
+    return {'title': title, 'description': description, 'fields': fields}
 
 
-def _dataset_section(path: Path, rows: int, headers: list[str]) -> dict[str, Any]:
-    x = headers[0] if headers else 'index'
-    ys = headers[1:2] if len(headers) > 1 else []
-    return {
-        'kind': 'chart',
-        'title': f'{path.stem} preview',
-        'content': {'chartType': 'line', 'x': x, 'y': ys}
+def parse_csv(path: Path) -> Dict[str, Any]:
+    rows = []
+    with path.open('r', encoding='utf-8', errors='ignore', newline='') as f:
+        reader = csv.DictReader(f)
+        for i, r in enumerate(reader):
+            rows.append(r)
+            if i >= 19:
+                break
+    fields = {
+        'table_preview': rows,
+        'row_count_preview': len(rows),
+        'chart_suggestions': ['bar','line','pie']
     }
+    return {'title': path.stem, 'description': 'Dataset imported from CSV', 'fields': fields}
 
 
-def parse_file_to_card(path: Path, root: Path) -> dict[str, Any] | None:
-    ext = path.suffix.lower()
-    rel = str(path.relative_to(root))
-    if ext not in SUPPORTED:
-        return None
-
-    base = {
-        'id': f'card-{abs(hash(str(path))) % 10**10}',
-        'title': path.stem.replace('_', ' ').title(),
-        'subtitle': rel,
-        'description': f'Generated from {rel}',
-        'stats': [],
-        'traits': [],
-        'sections': [],
-        'source': {'path': str(path), 'parser': f'{ext[1:]}-parser', 'confidence': 0.75},
-        'editableFields': ['title', 'subtitle', 'description', 'traits', 'sections'],
+def parse_xlsx(path: Path) -> Dict[str, Any]:
+    wb = load_workbook(path, read_only=True, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+    rows = list(ws.iter_rows(values_only=True, max_row=21))
+    headers = [str(h) for h in rows[0]] if rows else []
+    preview = []
+    for row in rows[1:]:
+        preview.append({headers[i] if i < len(headers) else f'col_{i}': row[i] for i in range(len(row))})
+    fields = {
+        'sheet': ws.title,
+        'columns': headers,
+        'table_preview': preview,
+        'row_count_preview': len(preview),
+        'chart_suggestions': ['bar','line','scatter']
     }
-
-    if ext in {'.txt', '.md'}:
-        text = _safe_read_text(path)
-        kv = _kv_from_text(text)
-        ctype = _card_type_from_path(path, set(kv.keys()))
-        base['type'] = ctype
-        base['traits'] = _extract_traits(text)
-        if kv:
-            base['sections'].append({'kind': 'kv', 'title': 'Extracted Fields', 'content': kv})
-            for k in ['model', 'personality', 'heartbeat', 'soul', 'port', 'host', 'server']:
-                if k in kv:
-                    base['stats'].append({'label': k.title(), 'value': kv[k]})
-        else:
-            snippet = "\n".join(text.splitlines()[:12]).strip()
-            base['sections'].append({'kind': 'markdown', 'title': 'Preview', 'content': snippet})
-        return base
-
-    if ext == '.json':
-        obj = json.loads(_safe_read_text(path))
-        if isinstance(obj, dict):
-            keys = set(obj.keys())
-            base['type'] = _card_type_from_path(path, keys)
-            base['sections'].append({'kind': 'kv', 'title': 'JSON Fields', 'content': obj})
-            for k in ['model', 'personality', 'heartbeat', 'soul', 'port', 'host', 'server', 'app_name']:
-                if k in obj:
-                    base['stats'].append({'label': k.title(), 'value': obj[k]})
-            base['traits'] = [k for k in list(keys)[:6]]
-        else:
-            base['type'] = 'generic'
-            base['sections'].append({'kind': 'markdown', 'title': 'JSON Preview', 'content': str(obj)[:500]})
-        return base
-
-    if ext in {'.yaml', '.yml'}:
-        if yaml is None:
-            return None
-        obj = yaml.safe_load(_safe_read_text(path))
-        if not isinstance(obj, dict):
-            obj = {'content': str(obj)}
-        keys = set(obj.keys())
-        base['type'] = _card_type_from_path(path, keys)
-        base['sections'].append({'kind': 'kv', 'title': 'YAML Fields', 'content': obj})
-        for k in ['model', 'personality', 'heartbeat', 'soul', 'port', 'host', 'server', 'app_name']:
-            if k in obj:
-                base['stats'].append({'label': k.title(), 'value': obj[k]})
-        base['traits'] = [k for k in list(keys)[:6]]
-        return base
-
-    if ext == '.csv':
-        with path.open('r', encoding='utf-8', errors='ignore', newline='') as f:
-            reader = csv.reader(f)
-            rows = list(reader)
-        headers = rows[0] if rows else []
-        body = rows[1:6] if len(rows) > 1 else []
-        base['type'] = 'dataset'
-        base['stats'] = [
-            {'label': 'Rows', 'value': max(0, len(rows)-1)},
-            {'label': 'Columns', 'value': len(headers)},
-        ]
-        base['sections'].append({'kind': 'table', 'title': 'Sample Rows', 'content': {'headers': headers, 'rows': body}})
-        base['sections'].append(_dataset_section(path, max(0, len(rows)-1), headers))
-        base['traits'] = ['dataset', 'csv']
-        base['source']['confidence'] = 0.9
-        return base
-
-    if ext == '.xlsx':
-        try:
-            from openpyxl import load_workbook  # type: ignore
-        except Exception:
-            return None
-        wb = load_workbook(path, data_only=True, read_only=True)
-        ws = wb.active
-        values = list(ws.iter_rows(values_only=True))
-        headers = [str(h) if h is not None else '' for h in (values[0] if values else [])]
-        preview = [list(r) for r in values[1:6]] if len(values) > 1 else []
-        base['type'] = 'dataset'
-        base['stats'] = [
-            {'label': 'Rows', 'value': max(0, len(values)-1)},
-            {'label': 'Columns', 'value': len(headers)},
-        ]
-        base['sections'].append({'kind': 'table', 'title': 'Sample Rows', 'content': {'headers': headers, 'rows': preview}})
-        base['sections'].append(_dataset_section(path, max(0, len(values)-1), headers))
-        base['traits'] = ['dataset', 'xlsx']
-        base['source']['confidence'] = 0.88
-        return base
-
-    return None
+    return {'title': path.stem, 'description': 'Dataset imported from XLSX', 'fields': fields}
 
 
-def ingest_folder(folder: str) -> dict[str, Any]:
-    root = Path(folder).expanduser().resolve()
-    if not root.exists() or not root.is_dir():
-        return {'status': 'error', 'message': 'folder not found', 'path': str(root)}
+def ingest_folder(folder: str) -> Dict[str, Any]:
+    p = Path(folder).expanduser().resolve()
+    if not p.exists() or not p.is_dir():
+        raise FileNotFoundError(f'Folder not found: {p}')
 
-    cards = []
-    skipped = []
-    errors = []
+    cards: List[Dict[str, Any]] = []
+    report = {'parsed': 0, 'skipped': 0, 'errors': []}
 
-    for path in root.rglob('*'):
-        if not path.is_file():
+    for fp in p.rglob('*'):
+        if not fp.is_file():
             continue
-        if path.suffix.lower() not in SUPPORTED:
-            continue
+        ext = fp.suffix.lower()
         try:
-            card = parse_file_to_card(path, root)
-            if card is None:
-                skipped.append(str(path))
+            if ext in TEXT_EXT:
+                parsed = parse_text(fp); parser='text'
+            elif ext in STRUCT_EXT:
+                parsed = parse_json_yaml(fp); parser='structured'
+            elif ext == '.csv':
+                parsed = parse_csv(fp); parser='csv'
+            elif ext == '.xlsx':
+                parsed = parse_xlsx(fp); parser='xlsx'
             else:
-                cards.append(card)
-        except Exception as e:
-            errors.append({'path': str(path), 'error': str(e)})
+                report['skipped'] += 1
+                continue
 
-    return {
-        'status': 'ok',
-        'path': str(root),
-        'cards': cards,
-        'report': {
-            'parsed': len(cards),
-            'skipped': len(skipped),
-            'errors': len(errors),
-            'error_details': errors[:20],
-        }
-    }
+            ctype, conf = infer_type(fp.name, parsed.get('fields', {}))
+            cards.append({
+                'type': ctype,
+                'title': parsed.get('title', fp.stem),
+                'subtitle': fp.name,
+                'description': parsed.get('description', ''),
+                'fields': parsed.get('fields', {}),
+                'source': {
+                    'path': str(fp),
+                    'parser': parser,
+                    'confidence': conf,
+                    'editable_fields': ['title','subtitle','description','fields']
+                }
+            })
+            report['parsed'] += 1
+        except Exception as e:
+            report['errors'].append({'file': str(fp), 'error': str(e)})
+
+    return {'cards': cards, 'report': report}

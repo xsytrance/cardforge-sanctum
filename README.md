@@ -1,22 +1,28 @@
 # CardForge
 
-Mobile-first web system that turns folders of text/media/spreadsheets into beautiful, editable trading-card style views.
+CardForge ingests mixed raw folder data and turns it into editable web cards.
 
-## Monorepo Layout
+## Features
+- Ingest: `.md`, `.txt`, `.json`, `.yaml/.yml`, `.csv`, `.xlsx`
+- Auto card type inference: `agent`, `service`, `dataset`, `note`
+- Editable cards + revision history + revert
+- Source provenance (path/parser/confidence/editable fields)
+- Mobile-first neon card deck UI
 
-- `apps/web` — Next.js frontend (card rendering + editor)
-- `apps/api` — FastAPI backend (ingestion, card CRUD, revisions)
-- `apps/worker` — background ingestion jobs
-- `packages/schema` — canonical CardSchema JSON Schema + examples
-- `docs` — product, architecture, and execution plans
+## Run
 
-## Quick Start (Scaffold Stage)
-
+### API
 ```bash
-cd /home/xsyprime/Apps/cardforge
-python3 -m venv .venv
-source .venv/bin/activate
-pip install fastapi uvicorn pydantic
+cd apps/api
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --host 127.0.0.1 --port 18000 --reload
 ```
 
-This repository currently contains architecture docs and schema definitions for execution kickoff.
+### Web
+```bash
+cd apps/web
+python3 -m http.server 13000 --bind 127.0.0.1
+```
+
+Open: `http://127.0.0.1:13000`

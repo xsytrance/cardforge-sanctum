@@ -1,150 +1,78 @@
-from __future__ import annotations
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from typing import Any, Literal
-from datetime import datetime, timezone
-import uuid
+from fastapi.middleware.cors import CORSMiddleware
+from models import CardCreate, CardPatch, IngestFolderRequest
+from storage import InMemoryDB
+from ingest import ingest_folder
 
-from ingest import ingest_folder as ingest_folder_impl
+app = FastAPI(title="CardForge API")
+db = InMemoryDB()
 
-app = FastAPI(title="CardForge API", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-CARD_TYPES = Literal["agent", "service", "workspace", "dataset", "generic"]
-
-class Card(BaseModel):
-    id: str
-    type: CARD_TYPES
-    title: str
-    subtitle: str | None = None
-    description: str | None = None
-    stats: list[dict[str, Any]] = Field(default_factory=list)
-    traits: list[str] = Field(default_factory=list)
-    sections: list[dict[str, Any]] = Field(default_factory=list)
-    source: dict[str, Any] | None = None
-    editableFields: list[str] = Field(default_factory=list)
-    updatedAt: datetime
-    revision: int = 1
-
-class CreateCard(BaseModel):
-    type: CARD_TYPES
-    title: str
-    subtitle: str | None = None
-    description: str | None = None
-
-class PatchCard(BaseModel):
-    title: str | None = None
-    subtitle: str | None = None
-    description: str | None = None
-    traits: list[str] | None = None
-    sections: list[dict[str, Any]] | None = None
-
-CARDS: dict[str, Card] = {}
-REVISIONS: dict[str, list[Card]] = {}
-
-
-def now() -> datetime:
-    return datetime.now(timezone.utc)
 
 @app.get('/healthz')
-def healthz() -> dict[str, str]:
-    return {"status": "ok", "service": "cardforge-api"}
+def healthz():
+    return {'ok': True}
 
-@app.get('/cards', response_model=list[Card])
-def list_cards() -> list[Card]:
-    return list(CARDS.values())
 
-@app.post('/cards', response_model=Card)
-def create_card(payload: CreateCard) -> Card:
-    cid = str(uuid.uuid4())
-    card = Card(
-        id=cid,
-        type=payload.type,
-        title=payload.title,
-        subtitle=payload.subtitle,
-        description=payload.description,
-        updatedAt=now(),
-        editableFields=["title", "subtitle", "description", "traits", "sections"],
-    )
-    CARDS[cid] = card
-    REVISIONS[cid] = [card]
-    return card
+@app.post('/cards')
+def create_card(payload: CardCreate):
+    c = db.create_card(payload.model_dump())
+    return db.serialize(c)
 
-@app.get('/cards/{card_id}', response_model=Card)
-def get_card(card_id: str) -> Card:
-    card = CARDS.get(card_id)
-    if not card:
-        raise HTTPException(status_code=404, detail='card not found')
-    return card
 
-@app.patch('/cards/{card_id}', response_model=Card)
-def patch_card(card_id: str, payload: PatchCard) -> Card:
-    card = CARDS.get(card_id)
-    if not card:
-        raise HTTPException(status_code=404, detail='card not found')
+@app.get('/cards')
+def list_cards():
+    return [db.serialize(c) for c in db.list_cards()]
 
-    data = card.model_dump()
-    update = payload.model_dump(exclude_unset=True)
-    data.update(update)
-    data['revision'] = card.revision + 1
-    data['updatedAt'] = now()
 
-    updated = Card(**data)
-    CARDS[card_id] = updated
-    REVISIONS[card_id].append(updated)
-    return updated
+@app.get('/cards/{card_id}')
+def get_card(card_id: str):
+    c = db.get_card(card_id)
+    if not c:
+        raise HTTPException(404, 'Card not found')
+    return db.serialize(c)
 
-@app.get('/cards/{card_id}/revisions', response_model=list[Card])
-def list_revisions(card_id: str) -> list[Card]:
-    revs = REVISIONS.get(card_id)
-    if not revs:
-        raise HTTPException(status_code=404, detail='card not found')
-    return revs
 
-@app.post('/cards/{card_id}/revert/{revision}', response_model=Card)
-def revert_card(card_id: str, revision: int) -> Card:
-    revs = REVISIONS.get(card_id)
-    if not revs:
-        raise HTTPException(status_code=404, detail='card not found')
+@app.patch('/cards/{card_id}')
+def patch_card(card_id: str, payload: CardPatch):
+    patch = {k:v for k,v in payload.model_dump().items() if v is not None}
+    c = db.update_card(card_id, patch, reason='patch')
+    if not c:
+        raise HTTPException(404, 'Card not found')
+    return db.serialize(c)
 
-    target = None
-    for r in revs:
-        if r.revision == revision:
-            target = r
-            break
-    if not target:
-        raise HTTPException(status_code=404, detail='revision not found')
 
-    data = target.model_dump()
-    data['revision'] = CARDS[card_id].revision + 1
-    data['updatedAt'] = now()
-    restored = Card(**data)
-    CARDS[card_id] = restored
-    REVISIONS[card_id].append(restored)
-    return restored
+@app.get('/cards/{card_id}/revisions')
+def revisions(card_id: str):
+    revs = db.get_revisions(card_id)
+    return [r.__dict__ for r in revs]
 
-class IngestRequest(BaseModel):
-    path: str
+
+@app.post('/cards/{card_id}/revert/{revision_id}')
+def revert(card_id: str, revision_id: str):
+    c = db.revert(card_id, revision_id)
+    if not c:
+        raise HTTPException(404, 'Card or revision not found')
+    return db.serialize(c)
 
 
 @app.post('/ingest/folder')
-def ingest_folder(payload: IngestRequest) -> dict[str, Any]:
-    result = ingest_folder_impl(payload.path)
-    if result.get('status') != 'ok':
-        raise HTTPException(status_code=400, detail=result)
+def ingest(req: IngestFolderRequest):
+    try:
+        result = ingest_folder(req.path)
+    except FileNotFoundError as e:
+        raise HTTPException(400, str(e))
 
-    imported = 0
-    for card_data in result.get('cards', []):
-        cid = card_data['id']
-        card_data['updatedAt'] = now()
-        card_data['revision'] = 1
-        card = Card(**card_data)
-        CARDS[cid] = card
-        REVISIONS[cid] = [card]
-        imported += 1
+    created_ids = []
+    for payload in result['cards']:
+        c = db.create_card(payload)
+        created_ids.append(c.id)
 
-    return {
-        'status': 'ok',
-        'imported': imported,
-        'report': result.get('report', {}),
-        'path': result.get('path')
-    }
+    return {'created': len(created_ids), 'card_ids': created_ids, 'report': result['report']}
