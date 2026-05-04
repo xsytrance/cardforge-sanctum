@@ -1,16 +1,46 @@
-:root{--bg:#07070d;--card:#111125;--text:#e8e8ff;--accent:#6ef3ff;--accent2:#ff4fd8;}
+:root{
+  --bg:#05060a;
+  --card:#0e1222cc;
+  --text:#e9ecff;
+  --accent:#00d9ff;
+  --accent2:#ff4fd8;
+  --accent3:#7dff9e;
+}
 *{box-sizing:border-box}
-body{margin:0;font-family:Inter,system-ui;background:radial-gradient(circle at top,#111133,#05050a);color:var(--text)}
-header{padding:16px 20px;border-bottom:1px solid #2a2a46}
-.controls{display:flex;gap:8px;padding:12px 20px;flex-wrap:wrap}
-input,textarea,button{border-radius:10px;border:1px solid #2f2f53;background:#0d0d1c;color:var(--text);padding:10px}
-button{cursor:pointer;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#05050a;font-weight:700}
-#status{padding:0 20px 8px;font-size:13px;opacity:.9;white-space:pre-wrap}
-.deck{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;padding:16px 20px 28px}
-.card{background:linear-gradient(160deg,#151533,#0f0f24);border:1px solid #3c3c63;padding:12px;border-radius:16px;box-shadow:0 0 24px #6ef3ff1f}
-.type{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+body{
+  margin:0;
+  font-family:Inter,system-ui;
+  color:var(--text);
+  background:var(--bg);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+.bg-layer{position:fixed;inset:0;z-index:-3;background-size:cover;background-position:center;pointer-events:none}
+.bg-hero{background-image:url('./assets/hero-bg.png');opacity:.42;filter:saturate(1.15)}
+.bg-nebula{background-image:url('./assets/nebula-bg.png');opacity:.28;mix-blend-mode:screen;animation:drift 26s ease-in-out infinite alternate}
+.bg-vignette{position:fixed;inset:0;z-index:-2;background:radial-gradient(circle at 30% 20%,#00d9ff22 0,transparent 40%),radial-gradient(circle at 75% 30%,#ff4fd822 0,transparent 35%),linear-gradient(180deg,transparent 0,#05060acc 75%,#05060a 100%);pointer-events:none}
+header{padding:30px 22px 20px;border-bottom:1px solid #8be6ff33;background:linear-gradient(180deg,#0a102955,#0a102900)}
+.brand{font:700 12px/1 Orbitron,sans-serif;letter-spacing:.25em;color:var(--accent);margin-bottom:8px}
+h1{margin:0;font:800 clamp(34px,7vw,72px)/.95 Orbitron,sans-serif;letter-spacing:-.03em;text-shadow:0 0 24px #00d9ff55}
+h1 span{color:#fff;text-shadow:0 0 24px #ff4fd899}
+header p{margin:10px 0 0;max-width:760px;color:#ccdaff}
+.glass{backdrop-filter:blur(12px);background:#0910278f;border:1px solid #7ce7ff40;box-shadow:0 10px 40px #001f3f55,inset 0 0 0 1px #ffffff14}
+.controls{display:flex;gap:8px;padding:12px 20px;flex-wrap:wrap;margin:10px 20px;border-radius:16px}
+input,textarea,button{border-radius:12px;border:1px solid #3c5676;background:#0a1329d8;color:var(--text);padding:10px}
+input:focus,textarea:focus{outline:1px solid var(--accent);box-shadow:0 0 0 3px #00d9ff33}
+button{cursor:pointer;background:linear-gradient(95deg,var(--accent),var(--accent2));color:#05050a;font-weight:800;letter-spacing:.02em;border:none;box-shadow:0 8px 18px #00d9ff33;transition:transform .18s ease,box-shadow .18s ease}
+button:hover{transform:translateY(-1px);box-shadow:0 12px 24px #ff4fd844}
+#status{margin:10px 20px;padding:12px 14px;font-size:13px;opacity:.95;white-space:pre-wrap;border-radius:14px}
+.deck{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;padding:16px 20px 36px}
+.card{position:relative;overflow:hidden;background:linear-gradient(160deg,#111a36cc,#0a1026cc);border:1px solid #68e4ff55;padding:13px;border-radius:18px;box-shadow:0 0 30px #00d9ff26,0 22px 45px #02050f8f;isolation:isolate}
+.card-overlay{position:absolute;inset:0;background:url('./assets/card-overlay.png') center/cover no-repeat;opacity:.15;mix-blend-mode:screen;z-index:-1}
+.card::after{content:'';position:absolute;inset:-1px;border-radius:18px;padding:1px;background:linear-gradient(130deg,#00d9ff88,#ff4fd877,#7dff9e55);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.type{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent3);font-weight:700}
 .title,.subtitle,.description,.fields{width:100%;margin-top:8px}
+.title{font-weight:700}
 .description,.fields{min-height:90px}
+summary{cursor:pointer;color:#b9dcff}
 .actions{display:flex;gap:8px;margin-top:10px}
 .revpanel{margin-top:10px;font-size:12px}
 .chartWrap{height:220px;padding:8px 0}
+@keyframes drift{from{transform:scale(1) translate3d(0,0,0)}to{transform:scale(1.08) translate3d(1%, -1.2%,0)}}

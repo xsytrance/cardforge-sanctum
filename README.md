@@ -51,3 +51,10 @@ Start here:
 3. `docs/INGESTION_SPEC.md`
 4. `docs/ARCHITECTURE.md`
 5. `docs/OPERATIONS_RUNBOOK.md`
+6. `docs/VISUAL_DESIGN_SYSTEM.md`
+
+## Visual wow layer
+CardForge includes a cinematic neon style pack generated via FAL and stored in:
+- `apps/web/assets/hero-bg.png`
+- `apps/web/assets/nebula-bg.png`
+- `apps/web/assets/card-overlay.png`

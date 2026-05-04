@@ -3,34 +3,43 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CardForge</title>
+  <title>CardForge // Neon Sanctum</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <div class="bg-layer bg-hero"></div>
+  <div class="bg-layer bg-nebula"></div>
+  <div class="bg-vignette"></div>
+
   <header>
-    <h1>CardForge</h1>
-    <p>Raw data → editable cards</p>
+    <div class="brand">CARDFORGE</div>
+    <h1>Raw Data → <span>Legendary Cards</span></h1>
+    <p>Ingest. Infer. Visualize. Revise. All with provenance for agent-grade operations.</p>
   </header>
 
-  <section class="controls">
+  <section class="controls glass">
     <input id="folderPath" placeholder="/absolute/folder/path"/>
     <button id="ingestBtn">Ingest Folder</button>
     <button id="refreshBtn">Refresh</button>
   </section>
 
-  <section class="controls">
+  <section class="controls glass">
     <button id="watchStartBtn">Start Watch</button>
     <button id="watchStopBtn">Stop Watch</button>
     <button id="watchStatusBtn">Watch Status</button>
     <input id="debounce" placeholder="debounce secs" value="2" style="max-width:140px"/>
   </section>
 
-  <section id="status"></section>
+  <section id="status" class="glass"></section>
   <main id="deck" class="deck"></main>
 
   <template id="cardTpl">
     <article class="card">
+      <div class="card-overlay"></div>
       <div class="type"></div>
       <input class="title"/>
       <input class="subtitle"/>
