@@ -1,4 +1,4 @@
-# CardForge Implementation Plan
+# CardForge Sanctum Implementation Plan
 
 1. API scaffold with card CRUD and revisions
 2. Folder ingestion pipeline for mixed formats

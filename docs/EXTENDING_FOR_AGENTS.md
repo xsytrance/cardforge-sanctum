@@ -1,4 +1,4 @@
-# Extending CardForge for Agent Ecosystems
+# Extending CardForge Sanctum for Agent Ecosystems
 
 ## Goal
 Teach multiple AI agents a shared contract for card generation.

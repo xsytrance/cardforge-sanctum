@@ -1,6 +1,6 @@
 # Visual Design System (Neon Sanctum)
 
-CardForge now ships with a cinematic visual layer designed for strong first impression and operational readability.
+CardForge Sanctum now ships with a cinematic visual layer designed for strong first impression and operational readability.
 
 ## Art assets
 Generated with FAL image generation and saved locally:

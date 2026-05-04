@@ -1,4 +1,4 @@
-# CardForge Architecture
+# CardForge Sanctum Architecture
 
 ## Pipeline
 1. **Discovery**: recursively enumerate files under folder.

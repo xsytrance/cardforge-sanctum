@@ -9,7 +9,7 @@ from watcher import IngestWatchManager
 APP_DIR = Path(__file__).resolve().parent
 DB_PATH = APP_DIR / "cardforge.db"
 
-app = FastAPI(title="CardForge API")
+app = FastAPI(title="CardForge Sanctum API")
 db = SQLiteDB(str(DB_PATH))
 
 

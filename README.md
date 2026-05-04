@@ -1,10 +1,10 @@
-# CardForge
+# CardForge Sanctum
 
-CardForge converts raw files into editable website cards for agents, services, notes, and datasets.
+CardForge Sanctum converts raw files into editable website cards for agents, services, notes, and datasets.
 
 ## Why this exists
 AI operators and autonomous agents need a deterministic path from messy raw data to structured visual artifacts.
-CardForge is that path: ingest, infer, normalize, persist, render, revise.
+CardForge Sanctum is that path: ingest, infer, normalize, persist, render, revise.
 
 ## Core capabilities
 - Ingest mixed folder data (`md/txt/json/yaml/csv/xlsx`)
@@ -54,7 +54,7 @@ Start here:
 6. `docs/VISUAL_DESIGN_SYSTEM.md`
 
 ## Visual wow layer
-CardForge includes a cinematic neon style pack generated via FAL and stored in:
+CardForge Sanctum includes a cinematic neon style pack generated via FAL and stored in:
 - `apps/web/assets/hero-bg.png`
 - `apps/web/assets/nebula-bg.png`
 - `apps/web/assets/card-overlay.png`

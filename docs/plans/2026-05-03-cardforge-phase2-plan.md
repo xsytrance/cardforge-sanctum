@@ -1,4 +1,4 @@
-# CardForge Phase 2 Implementation Plan
+# CardForge Sanctum Phase 2 Implementation Plan
 
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
